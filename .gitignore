@@ -25,3 +25,16 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Az Angular buildből másolt fájlok (frontend: npm run build:backend)
+/public/index.html
+/public/main-*.js
+/public/chunk-*.js
+/public/polyfills-*.js
+/public/styles-*.css
+/public/favicon.svg
+/public/sitemap.xml
+/public/robots.txt
+/public/3rdpartylicenses.txt
+/public/prerendered-routes.json
+/public/og-image.png
