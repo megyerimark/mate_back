@@ -18,7 +18,7 @@ class QuoteRequest extends Model
     public const DEADLINES = [
         'normal' => 'Normál (2–5 munkanap)',
         'urgent' => 'Sürgős (1–2 munkanap)',
-        'express' => 'Expressz (24 órán belül)',
+        'express' => 'Expressz (akár aznapra)',
     ];
 
     // A status és az admin_note szándékosan nincs itt: csak az admin felület állítja őket.
