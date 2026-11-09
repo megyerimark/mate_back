@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateQuoteRequest;
 use App\Http\Resources\QuoteRequestResource;
 use App\Models\QuoteRequest;
+use App\Support\QuoteMailer;
 use App\Support\XlsxWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Response;
@@ -144,6 +145,15 @@ class QuoteRequestController extends Controller
 
             $quoteRequest->forceFill($changes)->save();
         });
+
+        return new QuoteRequestResource($quoteRequest->load('events.user'));
+    }
+
+    /** A ki nem ment levelek újraküldése (vagy a megadott: notify = irodának, confirm = ügyfélnek). */
+    public function resendMail(Request $request, QuoteRequest $quoteRequest, QuoteMailer $mailer): QuoteRequestResource
+    {
+        $which = $request->validate(['which' => ['required', 'array'], 'which.*' => [Rule::in(['notify', 'confirm'])]])['which'];
+        $mailer->send($quoteRequest, $which);
 
         return new QuoteRequestResource($quoteRequest->load('events.user'));
     }

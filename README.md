@@ -94,21 +94,39 @@ RECAPTCHA_MIN_SCORE=0.5    # 0 = biztosan bot, 1 = biztosan ember
 ## Élesítés
 
 1. A frontendben: `npm run build:backend` – bemásolja a lebuildelt oldalt ennek a projektnek a `public` mappájába.
-   Így a Laravel szolgálja ki a weboldalt és az admin felületet is, **egy domainen, egy átlagos PHP tárhelyen**.
+   Így a Laravel szolgálja ki a weboldalt, az admin felületet és az API-t is, **egy domainen** (a frontend és a backend
+   így össze van kötve: az űrlap a `/api/quote-requests` címre küld, nincs külön beállítanivaló).
 2. Ezt a projektet töltsd fel a tárhelyre. A domain gyökere (document root) a `public` mappára mutasson.
-3. A tárhelyen: `composer install --no-dev --optimize-autoloader`, `.env` kitöltése, `php artisan key:generate`,
-   `php artisan migrate --force`, `php artisan admin:create ...`.
-4. `.env` fontos sorai:
+3. A tárhelyen: `composer install --no-dev --optimize-autoloader`, `.env` kitöltése (lásd lent), `php artisan key:generate`,
+   `php artisan migrate --force`.
+4. **Admin létrehozása** (egyszer):
+   ```
+   php artisan admin:create info@donetranslations.hu --name="Szatmáry Máté" --generate
+   ```
+   Kiírja a generált jelszót. (Vagy: `ADMIN_EMAIL` / `ADMIN_NAME` a `.env`-ben, majd `php artisan db:seed --force`.)
+   Belépés: `https://donetranslations.hu/admin` → a **Fiók** oldalon a jelszó megváltoztatható, és további adminok adhatók hozzá.
+5. **Levelezés** – a donetranslations.hu levelezőszervere (RackForest cPanel, `mail.donetranslations.hu`).
+   Az SPF és a DKIM már be van állítva a domainen, így az innen küldött levelek nem mennek levélszemétbe.
+   ```
+   MAIL_MAILER=smtp
+   MAIL_SCHEME=smtps
+   MAIL_HOST=mail.donetranslations.hu
+   MAIL_PORT=465
+   MAIL_USERNAME=info@donetranslations.hu
+   MAIL_PASSWORD=...              # az info@ postafiók jelszava (cPanel → E-mail fiókok)
+   MAIL_FROM_ADDRESS=info@donetranslations.hu
+   QUOTE_RECIPIENT_EMAIL=info@donetranslations.hu   # ide jönnek az ajánlatkérések
+   ```
+   Próba: `php artisan mail:test` – küld egy levelet a `QUOTE_RECIPIENT_EMAIL` címre.
+   Ha egy levél nem megy ki, az ajánlatkérés akkor is mentődik; az admin felületen „E-mail hiba” jelzés látszik, és onnan újraküldhető.
+6. Többi fontos `.env` sor:
    ```
    APP_ENV=production
    APP_DEBUG=false
    APP_URL=https://donetranslations.hu
    DB_CONNECTION=mysql            # vagy maradhat sqlite
-   MAIL_MAILER=smtp               # a tárhely SMTP adataival
-   MAIL_FROM_ADDRESS=info@donetranslations.hu
-   QUOTE_RECIPIENT_EMAIL=ide-jonnek-az-ajanlatkeresek@example.com
-   QUOTE_CONTACT_PHONE="+36 30 123 4567"
+   RECAPTCHA_SECRET_KEY=...       # lásd a reCAPTCHA részt
    # Csak ha a frontend külön domainen fut:
    CORS_ALLOWED_ORIGINS=https://donetranslations.hu
    ```
-5. A domain DNS-ét a tárhelyre kell állítani (ezt a domain-regisztrátornál lehet).
+7. A domain DNS-ét a tárhelyre kell állítani (ezt a domain-regisztrátornál lehet).

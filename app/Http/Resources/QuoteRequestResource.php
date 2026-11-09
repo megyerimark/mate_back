@@ -30,6 +30,9 @@ class QuoteRequestResource extends JsonResource
             'status_changed_at' => $this->status_changed_at?->toIso8601String(),
             'needs_follow_up' => $this->needsFollowUp(),
             'price' => $this->price,
+            'notified_at' => $this->notified_at?->toIso8601String(),
+            'confirmed_at' => $this->confirmed_at?->toIso8601String(),
+            'mail_error' => $this->mail_error,
             'events' => $this->whenLoaded('events', fn () => $this->events->map(fn ($e) => [
                 'type' => $e->type,
                 'text' => self::describe($e),

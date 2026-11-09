@@ -66,7 +66,7 @@ class QuoteRequest extends Model
 
     protected function casts(): array
     {
-        return ['status_changed_at' => 'datetime', 'price' => 'integer'];
+        return ['status_changed_at' => 'datetime', 'price' => 'integer', 'notified_at' => 'datetime', 'confirmed_at' => 'datetime'];
     }
 
     protected static function booted(): void
