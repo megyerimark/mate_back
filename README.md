@@ -64,7 +64,9 @@ Nyilvános regisztráció nincs. A bejelentkezés tokennel működik (Laravel Sa
 | `POST /api/admin/login` | bejelentkezés, tokent ad |
 | `POST /api/admin/logout` | kijelentkezés |
 | `GET /api/admin/stats` | összesítő számok állapot szerint |
-| `GET /api/admin/quote-requests` | lista (`status`, `search`, `page`) |
+| `GET /api/admin/stats/overview` | statisztika (`period`: `12m`, `year`, `all`): havi bontás, megrendelési arány, szolgáltatás, nyelv, határidő stb. |
+| `GET /api/admin/quote-requests` | lista (`status`, `search`, `from`, `to`, `page`) |
+| `GET /api/admin/quote-requests/export` | Excel (.xlsx) a lista szűrőivel, lapozás nélkül |
 | `GET /api/admin/quote-requests/{id}` | egy ajánlatkérés |
 | `PATCH /api/admin/quote-requests/{id}` | állapot (`status`) és belső jegyzet (`admin_note`) |
 | `DELETE /api/admin/quote-requests/{id}` | törlés a feltöltött fájllal együtt |

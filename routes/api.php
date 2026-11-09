@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\QuoteRequestController as AdminQuoteRequestController;
+use App\Http\Controllers\Admin\StatsController;
 use App\Http\Controllers\QuoteRequestController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,7 +18,10 @@ Route::prefix('admin')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/stats', [AdminQuoteRequestController::class, 'stats']);
+        Route::get('/stats/overview', StatsController::class);
         Route::get('/quote-requests', [AdminQuoteRequestController::class, 'index']);
+        // Az export a {quoteRequest} útvonal előtt legyen, különben azonosítónak venné.
+        Route::get('/quote-requests/export', [AdminQuoteRequestController::class, 'export']);
         Route::get('/quote-requests/{quoteRequest}', [AdminQuoteRequestController::class, 'show']);
         Route::patch('/quote-requests/{quoteRequest}', [AdminQuoteRequestController::class, 'update']);
         Route::delete('/quote-requests/{quoteRequest}', [AdminQuoteRequestController::class, 'destroy']);

@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateQuoteRequest;
 use App\Http\Resources\QuoteRequestResource;
 use App\Models\QuoteRequest;
+use App\Support\XlsxWriter;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,14 +21,83 @@ class QuoteRequestController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $filters = $request->validate([
-            'status' => ['nullable', Rule::in(array_keys(QuoteRequest::STATUSES))],
-            'search' => ['nullable', 'string', 'max:100'],
-            'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
+        $filters = $this->filters($request, ['per_page' => ['nullable', 'integer', 'min:5', 'max:100']]);
+
+        return QuoteRequestResource::collection(
+            $this->filtered($filters)->latest()->paginate($filters['per_page'] ?? 20),
+        );
+    }
+
+    /** Excel export a lista szűrőivel (állapot, keresés, dátumtartomány). */
+    public function export(Request $request): Response
+    {
+        $filters = $this->filters($request);
+        $quotes = $this->filtered($filters)->latest()->get();
+
+        $xlsx = (new XlsxWriter('Ajánlatkérések'))->columns([
+            ['title' => 'Azonosító', 'width' => 11],
+            ['title' => 'Beérkezett', 'width' => 18],
+            ['title' => 'Név', 'width' => 24],
+            ['title' => 'E-mail', 'width' => 30],
+            ['title' => 'Telefon', 'width' => 17],
+            ['title' => 'Szolgáltatás', 'width' => 34],
+            ['title' => 'Nyelv(ek)', 'width' => 22],
+            ['title' => 'Határidő', 'width' => 24],
+            ['title' => 'Weboldal', 'width' => 10],
+            ['title' => 'Állapot', 'width' => 17],
+            ['title' => 'Dokumentum', 'width' => 26],
+            ['title' => 'Az ügyfél üzenete', 'width' => 50],
+            ['title' => 'Belső jegyzet', 'width' => 40],
+            ['title' => 'Utoljára módosítva', 'width' => 18],
         ]);
 
-        $quotes = QuoteRequest::query()
+        foreach ($quotes as $q) {
+            $xlsx->addRow([
+                $q->id,
+                $q->created_at,
+                $q->name,
+                $q->email,
+                $q->phone,
+                $q->serviceLabel(),
+                trim(($q->source_language ? $q->source_language.' → ' : '').($q->target_language ?? '')),
+                $q->service === 'spelling' ? null : $q->deadlineLabel(),
+                strtoupper($q->locale ?? 'hu'),
+                $q->statusLabel(),
+                $q->document_name,
+                $q->message,
+                $q->admin_note,
+                $q->updated_at,
+            ]);
+        }
+
+        $name = 'ajanlatkeresek-'.now()->format('Y-m-d').'.xlsx';
+
+        return response($xlsx->toString(), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$name.'"',
+            'Access-Control-Expose-Headers' => 'Content-Disposition',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function filters(Request $request, array $extra = []): array
+    {
+        return $request->validate([
+            'status' => ['nullable', Rule::in(array_keys(QuoteRequest::STATUSES))],
+            'search' => ['nullable', 'string', 'max:100'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            ...$extra,
+        ]);
+    }
+
+    private function filtered(array $filters): Builder
+    {
+        return QuoteRequest::query()
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', Carbon::parse($from, config('app.timezone'))->startOfDay()))
+            ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', Carbon::parse($to, config('app.timezone'))->endOfDay()))
             ->when($filters['search'] ?? null, function ($q, $search) {
                 $like = '%'.$search.'%';
                 $q->where(fn ($q) => $q
@@ -32,11 +105,7 @@ class QuoteRequestController extends Controller
                     ->orWhere('email', 'like', $like)
                     ->orWhere('phone', 'like', $like)
                     ->orWhere('message', 'like', $like));
-            })
-            ->latest()
-            ->paginate($filters['per_page'] ?? 20);
-
-        return QuoteRequestResource::collection($quotes);
+            });
     }
 
     public function show(QuoteRequest $quoteRequest): QuoteRequestResource
