@@ -11,11 +11,24 @@ Kell hozzá: PHP 8.3+ és Composer.
 composer install
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite
-php artisan migrate
-php artisan admin:create admin@donetranslations.hu   # bekéri a jelszót
-php artisan serve                                    # http://localhost:8000
 ```
+
+Adatbázis (MySQL vagy MariaDB). Hozd létre egyszer:
+
+```sql
+CREATE DATABASE done_translations CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+A `.env`-ben a `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` legyen a sajátod (helyben gyakran `root` és üres jelszó), majd:
+
+```bash
+php artisan migrate
+php artisan admin:create admin@donetranslations.hu --generate   # kiírja a jelszót
+php artisan serve                                              # http://127.0.0.1:8000
+```
+
+SQLite-tal is működik: `DB_CONNECTION=sqlite`, a többi `DB_` sor törlése, `touch database/database.sqlite`.
+A tesztek (`php artisan test`) memóriában futó SQLite-ot használnak, a MySQL-adatbázishoz nem nyúlnak.
 
 Helyben a kimenő e-mailek a `storage/logs/laravel.log` fájlba kerülnek (`MAIL_MAILER=log`).
 
@@ -124,7 +137,10 @@ RECAPTCHA_MIN_SCORE=0.5    # 0 = biztosan bot, 1 = biztosan ember
    APP_ENV=production
    APP_DEBUG=false
    APP_URL=https://donetranslations.hu
-   DB_CONNECTION=mysql            # vagy maradhat sqlite
+   DB_CONNECTION=mysql            # a tárhely MySQL adatai (cPanel → MySQL adatbázisok)
+   DB_DATABASE=...
+   DB_USERNAME=...
+   DB_PASSWORD=...
    RECAPTCHA_SECRET_KEY=...       # lásd a reCAPTCHA részt
    # Csak ha a frontend külön domainen fut:
    CORS_ALLOWED_ORIGINS=https://donetranslations.hu
