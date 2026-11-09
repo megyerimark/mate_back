@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuoteRequest;
+use App\Models\QuoteRequestEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -17,22 +18,34 @@ class StatsController extends Controller
 
     public function __invoke(Request $request): JsonResponse
     {
-        $period = $request->validate(['period' => ['nullable', Rule::in(['12m', 'year', 'all'])]])['period'] ?? '12m';
+        $params = $request->validate([
+            'period' => ['nullable', Rule::in(['12m', 'year', 'all'])],
+            'group' => ['nullable', Rule::in(['month', 'week'])],
+        ]);
+        $period = $params['period'] ?? '12m';
+        $group = $params['group'] ?? 'month';
+        // Az időbélyegek az alkalmazás időzónájában (Europe/Budapest) vannak tárolva, így a határokat is abban számoljuk.
         $tz = config('app.timezone');
         $now = Carbon::now($tz);
 
         $to = $now->copy()->endOfMonth();
         $from = match ($period) {
             'year' => $now->copy()->startOfYear(),
-            'all' => Carbon::parse(QuoteRequest::min('created_at') ?? $now, 'UTC')->setTimezone($tz)->startOfMonth()
+            'all' => Carbon::parse(QuoteRequest::min('created_at') ?? $now, $tz)->startOfMonth()
                 ->max($now->copy()->subMonths(59)->startOfMonth()),
             default => $now->copy()->subMonths(11)->startOfMonth(),
         };
 
         // Kis adatmennyiség: a csoportosítás PHP-ban történik, így bármilyen adatbázissal működik.
         $quotes = QuoteRequest::query()
-            ->whereBetween('created_at', [$from->copy()->utc(), $to->copy()->utc()])
+            ->whereBetween('created_at', [$from, $to])
             ->get(['id', 'created_at', 'service', 'status', 'locale', 'deadline', 'target_language', 'price']);
+
+        // Válaszidő: a beérkezéstől az első állapotváltásig (amikor az iroda foglalkozni kezdett vele).
+        $firstAction = QuoteRequestEvent::where('type', 'status')->whereIn('quote_request_id', $quotes->pluck('id'))
+            ->selectRaw('quote_request_id, min(created_at) as first_at')->groupBy('quote_request_id')->pluck('first_at', 'quote_request_id');
+        $responseHours = $quotes->filter(fn ($q) => isset($firstAction[$q->id]))
+            ->map(fn ($q) => max(0, $q->created_at->diffInMinutes(Carbon::parse($firstAction[$q->id], $tz)) / 60));
 
         $won = $quotes->where('status', 'won')->count();
         // Megrendelések értéke: a megrendelt ajánlatkérések beírt ára.
@@ -54,20 +67,50 @@ class StatsController extends Controller
                 'revenue' => (int) $wonPriced->sum('price'),
                 'average_order' => $wonPriced->count() ? (int) round($wonPriced->avg('price')) : null,
                 'priced_orders' => $wonPriced->count(),
+                'response_hours' => $responseHours->count() ? round($responseHours->median(), 1) : null,
+                'responded' => $responseHours->count(),
             ],
+            'group' => $group,
+            'conversion_by_service' => collect(QuoteRequest::SERVICES)->map(function ($label, $key) use ($quotes) {
+                $items = $quotes->where('service', $key);
+                $won = $items->where('status', 'won')->count();
+                $closed = $won + $items->where('status', 'lost')->count();
+
+                return ['key' => $key, 'label' => $label, 'total' => $items->count(), 'won' => $won, 'rate' => $closed ? (int) round($won / $closed * 100) : null];
+            })->filter(fn ($r) => $r['total'] > 0)->values(),
             'follow_up' => QuoteRequest::awaitingFollowUp()->count(),
-            'this_month' => QuoteRequest::where('created_at', '>=', $now->copy()->startOfMonth()->utc())->count(),
+            'this_month' => QuoteRequest::where('created_at', '>=', $now->copy()->startOfMonth())->count(),
             'last_month' => QuoteRequest::whereBetween('created_at', [
-                $now->copy()->subMonthNoOverflow()->startOfMonth()->utc(),
-                $now->copy()->subMonthNoOverflow()->endOfMonth()->utc(),
+                $now->copy()->subMonthNoOverflow()->startOfMonth(),
+                $now->copy()->subMonthNoOverflow()->endOfMonth(),
             ])->count(),
-            'monthly' => $this->monthly($quotes, $from, $to, $tz),
+            'monthly' => $group === 'week' ? $this->weekly($quotes, $from, $to, $tz) : $this->monthly($quotes, $from, $to, $tz),
             'by_service' => $this->breakdown($quotes, 'service', QuoteRequest::SERVICES),
             'by_status' => $this->breakdown($quotes, 'status', QuoteRequest::STATUSES, keepEmpty: true),
             'by_locale' => $this->breakdown($quotes, 'locale', ['hu' => 'Magyar oldal', 'en' => 'Angol oldal'], keepEmpty: true),
             'by_deadline' => $this->breakdown($quotes->where('service', '!=', 'spelling'), 'deadline', QuoteRequest::DEADLINES),
             'top_languages' => $this->topLanguages($quotes),
         ]);
+    }
+
+    /** Heti bontás (hétfőtől); a címke a hét első napja. */
+    private function weekly(Collection $quotes, Carbon $from, Carbon $to, string $tz): array
+    {
+        $byWeek = $quotes->groupBy(fn ($q) => $q->created_at->copy()->setTimezone($tz)->startOfWeek()->format('Y-m-d'));
+        $weeks = [];
+        for ($w = $from->copy()->startOfWeek(); $w <= $to; $w->addWeek()) {
+            $key = $w->format('Y-m-d');
+            $items = $byWeek->get($key, collect());
+            $weeks[] = [
+                'month' => $key,
+                'label' => self::MONTHS_HU[$w->month - 1].' '.$w->day.'.',
+                'total' => $items->count(),
+                'won' => $items->where('status', 'won')->count(),
+                'revenue' => (int) $items->where('status', 'won')->sum('price'),
+            ];
+        }
+
+        return $weeks;
     }
 
     private function monthly(Collection $quotes, Carbon $from, Carbon $to, string $tz): array

@@ -10,7 +10,7 @@ class QuoteRequestEvent extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['user_id', 'type', 'from', 'to'];
+    protected $fillable = ['user_id', 'type', 'from', 'to', 'note'];
 
     protected function casts(): array
     {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateQuoteRequest;
 use App\Http\Resources\QuoteRequestResource;
 use App\Models\QuoteRequest;
+use App\Models\Task;
 use App\Support\QuoteMailer;
 use App\Support\XlsxWriter;
 use Illuminate\Database\Eloquent\Builder;
@@ -93,6 +94,7 @@ class QuoteRequestController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
             'follow_up' => ['nullable', 'boolean'],
+            'email' => ['nullable', 'email', 'max:190'],
             ...$extra,
         ]);
     }
@@ -102,6 +104,7 @@ class QuoteRequestController extends Controller
         return QuoteRequest::query()
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
             ->when($filters['follow_up'] ?? false, fn ($q) => $q->awaitingFollowUp())
+            ->when($filters['email'] ?? null, fn ($q, $email) => $q->where('email', $email))
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', Carbon::parse($from, config('app.timezone'))->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', Carbon::parse($to, config('app.timezone'))->endOfDay()))
             ->when($filters['search'] ?? null, function ($q, $search) {
@@ -149,6 +152,18 @@ class QuoteRequestController extends Controller
         return new QuoteRequestResource($quoteRequest->load('events.user'));
     }
 
+    /** Kommunikációs napló: hívás, e-mail, találkozó vagy egyéb bejegyzés az előzményekbe. */
+    public function contact(Request $request, QuoteRequest $quoteRequest): QuoteRequestResource
+    {
+        $data = $request->validate([
+            'channel' => ['required', Rule::in(['phone', 'email', 'meeting', 'other'])],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $quoteRequest->events()->create(['user_id' => $request->user()->id, 'type' => 'contact', 'from' => $data['channel'], 'note' => $data['note'] ?? null]);
+
+        return new QuoteRequestResource($quoteRequest->load('events.user'));
+    }
+
     /** A ki nem ment levelek újraküldése (vagy a megadott: notify = irodának, confirm = ügyfélnek). */
     public function resendMail(Request $request, QuoteRequest $quoteRequest, QuoteMailer $mailer): QuoteRequestResource
     {
@@ -186,6 +201,10 @@ class QuoteRequestController extends Controller
         return response()->json([
             'total' => (int) $byStatus->sum(),
             'follow_up' => QuoteRequest::awaitingFollowUp()->count(),
+            // A valós idejű jelzéshez: a legutóbbi ajánlatkérés.
+            'latest' => QuoteRequest::latest('id')->first(['id', 'name', 'created_at'])?->only('id', 'name', 'created_at'),
+            // Mára esedékes vagy lejárt, nyitott feladatok.
+            'tasks_due' => Task::whereNull('done_at')->where('due_at', '<=', now()->endOfDay())->count(),
             'this_month' => QuoteRequest::where('created_at', '>=', now()->startOfMonth())->count(),
             'by_status' => collect(QuoteRequest::STATUSES)
                 ->map(fn ($label, $key) => ['status' => $key, 'label' => $label, 'total' => (int) ($byStatus[$key] ?? 0)])

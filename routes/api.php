@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\QuoteRequestController as AdminQuoteRequestController;
 use App\Http\Controllers\Admin\StatsController;
+use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\QuoteRequestController;
 use App\Http\Controllers\TrustController;
@@ -38,6 +39,11 @@ Route::prefix('admin')->group(function () {
         Route::delete('/quote-requests/{quoteRequest}', [AdminQuoteRequestController::class, 'destroy']);
         Route::get('/quote-requests/{quoteRequest}/document', [AdminQuoteRequestController::class, 'document']);
         Route::get('/quote-requests/{quoteRequest}/documents/{index}', [AdminQuoteRequestController::class, 'document'])->whereNumber('index');
+        Route::post('/quote-requests/{quoteRequest}/contact', [AdminQuoteRequestController::class, 'contact']);
+        Route::get('/tasks', [TaskController::class, 'index']);
+        Route::post('/tasks', [TaskController::class, 'store']);
+        Route::patch('/tasks/{task}', [TaskController::class, 'update']);
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
         Route::get('/testimonials', [AdminTrustController::class, 'testimonials']);
         Route::post('/testimonials', [AdminTrustController::class, 'storeTestimonial']);
         Route::patch('/testimonials/{testimonial}', [AdminTrustController::class, 'updateTestimonial']);

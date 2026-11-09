@@ -35,6 +35,7 @@ class QuoteRequestResource extends JsonResource
             'mail_error' => $this->mail_error,
             'events' => $this->whenLoaded('events', fn () => $this->events->map(fn ($e) => [
                 'type' => $e->type,
+                'channel' => $e->type === 'contact' ? $e->from : null,
                 'text' => self::describe($e),
                 'user' => $e->user?->name ?? $e->user?->email,
                 'created_at' => $e->created_at?->toIso8601String(),
@@ -56,6 +57,8 @@ class QuoteRequestResource extends JsonResource
             'status' => 'Állapot: '.(QuoteRequest::STATUSES[$e->from] ?? $e->from).' → '.(QuoteRequest::STATUSES[$e->to] ?? $e->to),
             'price' => 'Ár: '.$ft($e->from).' → '.$ft($e->to),
             'note' => 'Belső jegyzet módosítva',
+            'contact' => (['phone' => 'Telefonhívás', 'email' => 'E-mail', 'meeting' => 'Találkozó', 'other' => 'Kapcsolatfelvétel'][$e->from] ?? 'Kapcsolatfelvétel')
+                .($e->note ? ': '.$e->note : ''),
             default => $e->type,
         };
     }
