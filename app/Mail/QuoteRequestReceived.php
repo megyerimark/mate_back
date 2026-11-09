@@ -22,7 +22,7 @@ class QuoteRequestReceived extends Mailable
     {
         return new Envelope(
             replyTo: [new Address($this->quote->email, $this->quote->name)],
-            subject: "Új ajánlatkérés: {$this->quote->name} ({$this->quote->deadlineLabel()})",
+            subject: "Új ajánlatkérés: {$this->quote->name} – {$this->quote->serviceLabel()}".($this->quote->locale === 'en' ? ' [EN]' : ''),
         );
     }
 

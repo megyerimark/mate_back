@@ -79,8 +79,8 @@ class QuoteRequestTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors([
                 'name' => 'Kérjük, adja meg a nevét.',
-                'email' => 'Kérjük, adjon meg egy érvényes e-mail címet.',
-                'privacy_accepted' => 'Az adatkezelési tájékoztató elfogadása kötelező.',
+                'email' => 'Kérjük, adjon meg egy érvényes e-mail-címet.',
+                'privacy_accepted' => 'Az adatvédelmi nyilatkozat elfogadása kötelező.',
             ]);
 
         $this->assertDatabaseCount('quote_requests', 0);
@@ -115,22 +115,44 @@ class QuoteRequestTest extends TestCase
         $this->post('/api/quote-requests', $this->payload())->assertTooManyRequests();
     }
 
-    public function test_spa_routes_serve_the_angular_index(): void
+    public function test_it_stores_service_interpreting_type_and_locale(): void
     {
-        $index = public_path('index.html');
-        $existed = is_file($index);
-        if (! $existed) {
-            file_put_contents($index, '<app-root></app-root>');
-        }
+        $this->post('/api/quote-requests', $this->payload([
+            'service' => 'interpreting',
+            'interpreting_type' => 'simultaneous',
+            'target_language' => 'magyar–német',
+            'locale' => 'en',
+        ]))->assertCreated();
 
-        try {
-            $this->get('/')->assertOk();
-            $this->get('/koszonjuk')->assertOk();
-            $this->get('/api/nem-letezik')->assertNotFound();
-        } finally {
-            if (! $existed) {
-                unlink($index);
-            }
-        }
+        $quote = QuoteRequest::sole();
+        $this->assertSame('interpreting', $quote->service);
+        $this->assertSame('simultaneous', $quote->interpreting_type);
+        $this->assertSame('en', $quote->locale);
+        $this->assertSame('Tolmácsolás – Szinkrontolmácsolás', $quote->serviceLabel());
+
+        // Az angol oldalról érkezett ügyfél angol visszaigazolást kap.
+        Mail::assertSent(QuoteRequestConfirmation::class, function (QuoteRequestConfirmation $mail) {
+            $mail->assertHasSubject('We have received your request – '.config('app.name'));
+            $mail->assertSeeInHtml('Dear Teszt Elek');
+
+            return true;
+        });
+    }
+
+    public function test_interpreting_type_is_dropped_for_other_services(): void
+    {
+        $this->post('/api/quote-requests', $this->payload(['service' => 'translation', 'interpreting_type' => 'remote']))->assertCreated();
+
+        $this->assertNull(QuoteRequest::sole()->interpreting_type);
+    }
+
+    public function test_spelling_question_requires_a_message_and_english_errors_for_english_site(): void
+    {
+        $this->postJson('/api/quote-requests', $this->payload(['service' => 'spelling', 'message' => '', 'locale' => 'en', 'email' => 'x']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'message' => 'Please write your question.',
+                'email' => 'Please enter a valid email address.',
+            ]);
     }
 }

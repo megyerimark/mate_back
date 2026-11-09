@@ -1,7 +1,7 @@
 <x-mail::message>
 # Kedves {{ $quote->name }}!
 
-Köszönjük, megkaptuk az ajánlatkérését. Munkaidőben **1 órán belül** jelentkezünk a pontos árral és határidővel.
+Köszönjük, megkaptuk az üzenetét. A projektmenedzsereink a lehető leghamarabb felveszik Önnel a kapcsolatot@if ($quote->service !== 'spelling'), és egyedi árajánlatot készítenek Önnek@endif.
 
 @if ($quote->document_name)
 A csatolt dokumentum ({{ $quote->document_name }}) rendben megérkezett.

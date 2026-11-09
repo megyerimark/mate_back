@@ -23,6 +23,12 @@ class QuoteRequestController extends Controller
         }
 
         $data = $request->safe()->except(['document', 'privacy_accepted', 'website']);
+        $data['service'] = $data['service'] ?? 'translation';
+        $data['locale'] = $data['locale'] ?? 'hu';
+        // A tolmácsolás típusa csak tolmácsolásnál értelmes.
+        if ($data['service'] !== 'interpreting') {
+            $data['interpreting_type'] = null;
+        }
 
         if ($file = $request->file('document')) {
             $data['document_path'] = $file->store('quote-requests', 'local');

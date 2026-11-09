@@ -27,6 +27,8 @@ Homestead.yaml
 Thumbs.db
 
 # Az Angular buildből másolt fájlok (frontend: npm run build:backend)
+/resources/frontend
+/public/index.csr.html
 /public/index.html
 /public/main-*.js
 /public/chunk-*.js

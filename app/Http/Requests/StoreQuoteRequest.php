@@ -19,10 +19,14 @@ class StoreQuoteRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
+            'service' => ['nullable', Rule::in(array_keys(QuoteRequest::SERVICES))],
+            'interpreting_type' => ['nullable', Rule::in(array_keys(QuoteRequest::INTERPRETING_TYPES))],
+            'locale' => ['nullable', Rule::in(QuoteRequest::LOCALES)],
             'deadline' => ['required', Rule::in(array_keys(QuoteRequest::DEADLINES))],
             'source_language' => ['nullable', 'string', 'max:50'],
-            'target_language' => ['nullable', 'string', 'max:50'],
-            'message' => ['nullable', 'string', 'max:5000'],
+            'target_language' => ['nullable', 'string', 'max:100'],
+            // Helyesírási tanácsadásnál a kérdés maga az üzenet.
+            'message' => ['nullable', 'required_if:service,spelling', 'string', 'max:5000'],
             'document' => [
                 'nullable',
                 'file',
@@ -37,32 +41,52 @@ class StoreQuoteRequest extends FormRequest
 
     public function messages(): array
     {
+        $mb = intdiv(config('quotes.max_file_kb'), 1024);
+
+        if ($this->input('locale') === 'en') {
+            return [
+                'name.required' => 'Please enter your name.',
+                'email.required' => 'Please enter your email address.',
+                'email.email' => 'Please enter a valid email address.',
+                'deadline.required' => 'Please choose a deadline.',
+                'deadline.in' => 'Invalid deadline.',
+                'service.in' => 'Invalid service.',
+                'interpreting_type.in' => 'Invalid interpreting type.',
+                'message.required_if' => 'Please write your question.',
+                'document.max' => "The file is too large (max. {$mb} MB). Please send it by email.",
+                'document.mimes' => 'This file type is not supported. You can upload PDF, Word, Excel, PowerPoint, image or text files.',
+                'document.uploaded' => 'The file could not be uploaded. Please try again or send it by email.',
+                'document.file' => 'The document could not be uploaded.',
+                'privacy_accepted.accepted' => 'You need to accept the Privacy Policy.',
+                '*.max' => 'The :attribute may be at most :max characters.',
+                '*.string' => 'The :attribute field is invalid.',
+            ];
+        }
+
         return [
             'name.required' => 'Kérjük, adja meg a nevét.',
-            'email.required' => 'Kérjük, adja meg az e-mail címét.',
-            'email.email' => 'Kérjük, adjon meg egy érvényes e-mail címet.',
+            'email.required' => 'Kérjük, adja meg az e-mail-címét.',
+            'email.email' => 'Kérjük, adjon meg egy érvényes e-mail-címet.',
             'deadline.required' => 'Kérjük, válasszon határidőt.',
             'deadline.in' => 'Érvénytelen határidő.',
-            'document.max' => 'A fájl túl nagy (max. '.intdiv(config('quotes.max_file_kb'), 1024).' MB). Kérjük, küldje e-mailben.',
+            'service.in' => 'Ismeretlen szolgáltatás.',
+            'interpreting_type.in' => 'Ismeretlen tolmácsolási típus.',
+            'message.required_if' => 'Kérjük, írja meg a kérdését.',
+            'document.max' => "A fájl túl nagy (max. {$mb} MB). Kérjük, küldje e-mailben.",
             'document.mimes' => 'Ez a fájltípus nem támogatott. PDF, Word, Excel, PowerPoint, kép vagy szöveg tölthető fel.',
             'document.uploaded' => 'A fájl feltöltése nem sikerült. Kérjük, próbálja újra vagy küldje e-mailben.',
-            'privacy_accepted.accepted' => 'Az adatkezelési tájékoztató elfogadása kötelező.',
+            'document.file' => 'A dokumentum feltöltése nem sikerült.',
+            'privacy_accepted.accepted' => 'Az adatvédelmi nyilatkozat elfogadása kötelező.',
             '*.max' => 'A(z) :attribute legfeljebb :max karakter lehet.',
             '*.string' => 'A(z) :attribute mező formátuma érvénytelen.',
-            'document.file' => 'A dokumentum feltöltése nem sikerült.',
         ];
     }
 
     public function attributes(): array
     {
-        return [
-            'name' => 'név',
-            'email' => 'e-mail',
-            'phone' => 'telefon',
-            'source_language' => 'forrásnyelv',
-            'target_language' => 'célnyelv',
-            'message' => 'megjegyzés',
-        ];
+        return $this->input('locale') === 'en'
+            ? ['name' => 'name', 'email' => 'email', 'phone' => 'phone', 'source_language' => 'source language', 'target_language' => 'target language', 'message' => 'message']
+            : ['name' => 'név', 'email' => 'e-mail', 'phone' => 'telefon', 'source_language' => 'forrásnyelv', 'target_language' => 'célnyelv', 'message' => 'üzenet'];
     }
 
     public function isSpam(): bool

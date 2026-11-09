@@ -18,11 +18,18 @@ class QuoteRequestConfirmation extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Megkaptuk az ajánlatkérését – '.config('app.name'));
+        $subject = $this->quote->locale === 'en'
+            ? 'We have received your request – '.config('app.name')
+            : 'Megkaptuk az ajánlatkérését – '.config('app.name');
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content
     {
-        return new Content(markdown: 'mail.quote-request-confirmation');
+        // Az ügyfél a weboldal nyelvén kapja a visszaigazolást.
+        return new Content(markdown: $this->quote->locale === 'en'
+            ? 'mail.quote-request-confirmation-en'
+            : 'mail.quote-request-confirmation');
     }
 }

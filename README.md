@@ -29,6 +29,23 @@ Tesztek: `php artisan test`
 4. Az ügyfél automatikus visszaigazoló e-mailt kap.
 5. Védelem: rejtett mezős spamszűrő (honeypot), IP-alapú korlát (5 kérés/perc, 30/nap), fájltípus- és méretellenőrzés (max. 8 MB).
 
+Az űrlap a szolgáltatást is elküldi (`service`: translation, proofreading, post_editing, interpreting, spelling),
+tolmácsolásnál a típusát (`interpreting_type`), és a weboldal nyelvét (`locale`: hu/en). Az angol oldalról érkező
+ügyfél angol hibaüzeneteket és angol visszaigazoló e-mailt kap.
+
+## A weboldal kiszolgálása (régi WordPress címek)
+
+A frontend előrenderelt oldalait (`resources/frontend`, a frontend `npm run build:backend` parancsa másolja ide)
+a `FrontendController` szolgálja ki, úgy, hogy a Google-helyezés megmaradjon:
+
+- a címek ugyanazok, mint a régi WordPress oldalon, perjellel a végén (`/forditas/`);
+- perjel nélküli cím (`/forditas`) → 301-es átirányítás a perjelesre;
+- a régi Yoast sitemap (`/sitemap_index.xml`, `/page-sitemap.xml`) → 301 a `/sitemap.xml`-re;
+- ismeretlen cím → valódi **404**; az `/admin` a böngészőben fut.
+
+Ezért a `public/.htaccess`-ből kivettük a Laravel „Redirect Trailing Slashes” szabályát (az levágná a perjelet).
+**Nginx** esetén a szokásos Laravel beállítás kell, `$uri/` nélkül: `try_files $uri /index.php?$query_string;`
+
 Az e-mailek a weboldal színeit használják: `resources/views/vendor/mail/html/themes/donetranslations.css`.
 
 ## Admin

@@ -15,6 +15,25 @@ class QuoteRequest extends Model
         'lost' => 'Elmaradt',
     ];
 
+    /** Melyik szolgáltatásra kértek ajánlatot (a weboldal űrlapján választható). */
+    public const SERVICES = [
+        'translation' => 'Fordítás',
+        'proofreading' => 'Lektorálás',
+        'post_editing' => 'Utószerkesztés (PEMT)',
+        'interpreting' => 'Tolmácsolás',
+        'spelling' => 'Helyesírási tanácsadás',
+    ];
+
+    public const INTERPRETING_TYPES = [
+        'consecutive' => 'Követő tolmácsolás',
+        'simultaneous' => 'Szinkrontolmácsolás',
+        'remote' => 'Távtolmácsolás',
+        'chuchotage' => 'Susotázs',
+        'other' => 'Egyéb',
+    ];
+
+    public const LOCALES = ['hu', 'en'];
+
     public const DEADLINES = [
         'normal' => 'Normál (2–5 munkanap)',
         'urgent' => 'Sürgős (1–2 munkanap)',
@@ -26,6 +45,9 @@ class QuoteRequest extends Model
         'name',
         'email',
         'phone',
+        'service',
+        'interpreting_type',
+        'locale',
         'deadline',
         'source_language',
         'target_language',
@@ -40,6 +62,15 @@ class QuoteRequest extends Model
     public function statusLabel(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function serviceLabel(): string
+    {
+        $label = self::SERVICES[$this->service] ?? $this->service;
+
+        return $this->interpreting_type
+            ? $label.' – '.(self::INTERPRETING_TYPES[$this->interpreting_type] ?? $this->interpreting_type)
+            : $label;
     }
 
     public function deadlineLabel(): string

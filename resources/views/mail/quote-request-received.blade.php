@@ -7,8 +7,10 @@
 | **Név** | {{ $quote->name }} |
 | **E-mail** | {{ $quote->email }} |
 | **Telefon** | {{ $quote->phone ?: '–' }} |
+| **Szolgáltatás** | {{ $quote->serviceLabel() }} |
 | **Határidő** | {{ $quote->deadlineLabel() }} |
-| **Nyelvpár** | {{ $quote->source_language ?: '?' }} → {{ $quote->target_language ?: '?' }} |
+| **Nyelv(ek)** | {{ $quote->source_language ? $quote->source_language.' → ' : '' }}{{ $quote->target_language ?: '–' }} |
+| **Weboldal nyelve** | {{ $quote->locale === 'en' ? 'angol (a visszaigazolást angolul kapta)' : 'magyar' }} |
 | **Dokumentum** | {{ $quote->document_name ?: 'nincs csatolva' }} |
 </x-mail::table>
 
