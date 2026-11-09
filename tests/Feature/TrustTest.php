@@ -59,4 +59,9 @@ class TrustTest extends TestCase
         $this->deleteJson("/api/admin/partners/{$id}")->assertOk();
         Storage::disk('local')->assertMissing($partner->logo_path);
     }
+
+    public function test_health_endpoint_identifies_the_backend(): void
+    {
+        $this->getJson('/api/health')->assertOk()->assertExactJson(['ok' => true, 'app' => 'done-translations']);
+    }
 }

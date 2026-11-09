@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/quote-requests', [QuoteRequestController::class, 'store'])
     ->middleware('throttle:quote-requests');
 
+// Állapotjelzés: fejlesztéskor a frontend ebből tudja, hogy fut-e (és ez-e) a backend
+Route::get('/health', fn () => response()->json(['ok' => true, 'app' => 'done-translations']));
+
 // A weboldal bizalomépítő szakasza (csak publikált tartalom)
 Route::get('/trust', [TrustController::class, 'index'])->middleware('throttle:60,1');
 Route::get('/partners/{partner}/logo', [TrustController::class, 'logo']);
