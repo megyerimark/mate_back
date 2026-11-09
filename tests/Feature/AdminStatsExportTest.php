@@ -63,7 +63,7 @@ class AdminStatsExportTest extends TestCase
             ->assertJsonPath('this_month', 2)
             ->assertJsonPath('last_month', 0)
             ->assertJsonCount(12, 'monthly')
-            ->assertJsonPath('monthly.11', ['month' => '2026-11', 'label' => '2026. nov.', 'total' => 2, 'won' => 1])
+            ->assertJsonPath('monthly.11', ['month' => '2026-11', 'label' => '2026. nov.', 'total' => 2, 'won' => 1, 'revenue' => 0])
             ->assertJsonPath('monthly.9.total', 1)
             ->assertJsonPath('top_languages.0', ['label' => 'német', 'total' => 2])
             ->assertJsonFragment(['key' => 'interpreting', 'label' => 'Tolmácsolás', 'total' => 1])
@@ -102,6 +102,6 @@ class AdminStatsExportTest extends TestCase
         $this->assertStringContainsString('Megrendelve', $sheet);
         $this->assertStringNotContainsString('Nagy Péter', $sheet);   // állapot szűrő
         $this->assertStringNotContainsString('Régi Ügyfél', $sheet);  // dátum szűrő
-        $this->assertStringContainsString('<autoFilter ref="A1:N2"/>', $sheet);
+        $this->assertStringContainsString('<autoFilter ref="A1:O2"/>', $sheet);
     }
 }

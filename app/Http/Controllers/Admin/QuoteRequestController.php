@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -45,6 +46,7 @@ class QuoteRequestController extends Controller
             ['title' => 'Határidő', 'width' => 24],
             ['title' => 'Weboldal', 'width' => 10],
             ['title' => 'Állapot', 'width' => 17],
+            ['title' => 'Ár (Ft)', 'width' => 13],
             ['title' => 'Dokumentum', 'width' => 26],
             ['title' => 'Az ügyfél üzenete', 'width' => 50],
             ['title' => 'Belső jegyzet', 'width' => 40],
@@ -63,6 +65,7 @@ class QuoteRequestController extends Controller
                 $q->service === 'spelling' ? null : $q->deadlineLabel(),
                 strtoupper($q->locale ?? 'hu'),
                 $q->statusLabel(),
+                $q->price,
                 $q->document_name,
                 $q->message,
                 $q->admin_note,
@@ -88,6 +91,7 @@ class QuoteRequestController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'follow_up' => ['nullable', 'boolean'],
             ...$extra,
         ]);
     }
@@ -96,6 +100,7 @@ class QuoteRequestController extends Controller
     {
         return QuoteRequest::query()
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['follow_up'] ?? false, fn ($q) => $q->awaitingFollowUp())
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', Carbon::parse($from, config('app.timezone'))->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', Carbon::parse($to, config('app.timezone'))->endOfDay()))
             ->when($filters['search'] ?? null, function ($q, $search) {
@@ -110,14 +115,37 @@ class QuoteRequestController extends Controller
 
     public function show(QuoteRequest $quoteRequest): QuoteRequestResource
     {
-        return new QuoteRequestResource($quoteRequest);
+        return new QuoteRequestResource($quoteRequest->load('events.user'));
     }
 
     public function update(UpdateQuoteRequest $request, QuoteRequest $quoteRequest): QuoteRequestResource
     {
-        $quoteRequest->forceFill($request->validated())->save();
+        $changes = $request->validated();
 
-        return new QuoteRequestResource($quoteRequest);
+        DB::transaction(function () use ($changes, $quoteRequest, $request) {
+            // Előzmények: csak a ténylegesen megváltozott mezők kerülnek bele.
+            $log = fn (string $type, $from, $to) => $quoteRequest->events()->create([
+                'user_id' => $request->user()?->id, 'type' => $type, 'from' => $from, 'to' => $to,
+            ]);
+
+            if (array_key_exists('status', $changes) && $changes['status'] !== $quoteRequest->status) {
+                $log('status', $quoteRequest->status, $changes['status']);
+                $quoteRequest->status_changed_at = now();
+            }
+            if (array_key_exists('price', $changes) && $changes['price'] !== null) {
+                $changes['price'] = (int) $changes['price'];
+            }
+            if (array_key_exists('price', $changes) && $changes['price'] !== $quoteRequest->price) {
+                $log('price', $quoteRequest->price, $changes['price']);
+            }
+            if (array_key_exists('admin_note', $changes) && ($changes['admin_note'] ?? '') !== ($quoteRequest->admin_note ?? '')) {
+                $log('note', null, null);
+            }
+
+            $quoteRequest->forceFill($changes)->save();
+        });
+
+        return new QuoteRequestResource($quoteRequest->load('events.user'));
     }
 
     public function destroy(QuoteRequest $quoteRequest): JsonResponse
@@ -151,6 +179,7 @@ class QuoteRequestController extends Controller
 
         return response()->json([
             'total' => (int) $byStatus->sum(),
+            'follow_up' => QuoteRequest::awaitingFollowUp()->count(),
             'this_month' => QuoteRequest::where('created_at', '>=', now()->startOfMonth())->count(),
             'by_status' => collect(QuoteRequest::STATUSES)
                 ->map(fn ($label, $key) => ['status' => $key, 'label' => $label, 'total' => (int) ($byStatus[$key] ?? 0)])

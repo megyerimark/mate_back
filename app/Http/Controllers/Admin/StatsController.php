@@ -32,9 +32,11 @@ class StatsController extends Controller
         // Kis adatmennyiség: a csoportosítás PHP-ban történik, így bármilyen adatbázissal működik.
         $quotes = QuoteRequest::query()
             ->whereBetween('created_at', [$from->copy()->utc(), $to->copy()->utc()])
-            ->get(['id', 'created_at', 'service', 'status', 'locale', 'deadline', 'target_language']);
+            ->get(['id', 'created_at', 'service', 'status', 'locale', 'deadline', 'target_language', 'price']);
 
         $won = $quotes->where('status', 'won')->count();
+        // Megrendelések értéke: a megrendelt ajánlatkérések beírt ára.
+        $wonPriced = $quotes->where('status', 'won')->whereNotNull('price');
         $lost = $quotes->where('status', 'lost')->count();
 
         return response()->json([
@@ -49,7 +51,11 @@ class StatsController extends Controller
                 // Megrendelési arány a lezárt (megrendelt vagy elmaradt) ajánlatkérésekből
                 'conversion' => $won + $lost > 0 ? round($won / ($won + $lost) * 100) : null,
                 'english' => $quotes->where('locale', 'en')->count(),
+                'revenue' => (int) $wonPriced->sum('price'),
+                'average_order' => $wonPriced->count() ? (int) round($wonPriced->avg('price')) : null,
+                'priced_orders' => $wonPriced->count(),
             ],
+            'follow_up' => QuoteRequest::awaitingFollowUp()->count(),
             'this_month' => QuoteRequest::where('created_at', '>=', $now->copy()->startOfMonth()->utc())->count(),
             'last_month' => QuoteRequest::whereBetween('created_at', [
                 $now->copy()->subMonthNoOverflow()->startOfMonth()->utc(),
@@ -76,6 +82,7 @@ class StatsController extends Controller
                 'label' => $m->year.'. '.self::MONTHS_HU[$m->month - 1],
                 'total' => $items->count(),
                 'won' => $items->where('status', 'won')->count(),
+                'revenue' => (int) $items->where('status', 'won')->sum('price'),
             ];
         }
 

@@ -68,12 +68,14 @@ Nyilvános regisztráció nincs. A bejelentkezés tokennel működik (Laravel Sa
 | `POST /api/admin/logout` | kijelentkezés |
 | `GET /api/admin/stats` | összesítő számok állapot szerint |
 | `GET /api/admin/stats/overview` | statisztika (`period`: `12m`, `year`, `all`): havi bontás, megrendelési arány, szolgáltatás, nyelv, határidő stb. |
-| `GET /api/admin/quote-requests` | lista (`status`, `search`, `from`, `to`, `page`) |
+| `GET /api/admin/quote-requests` | lista (`status`, `follow_up`, `search`, `from`, `to`, `page`) |
 | `GET /api/admin/quote-requests/export` | Excel (.xlsx) a lista szűrőivel, lapozás nélkül |
 | `GET /api/admin/quote-requests/{id}` | egy ajánlatkérés |
-| `PATCH /api/admin/quote-requests/{id}` | állapot (`status`) és belső jegyzet (`admin_note`) |
+| `PATCH /api/admin/quote-requests/{id}` | állapot (`status`), ár forintban (`price`) és belső jegyzet (`admin_note`); minden változás bekerül az előzményekbe |
 | `DELETE /api/admin/quote-requests/{id}` | törlés a feltöltött fájllal együtt |
 | `GET /api/admin/quote-requests/{id}/document` | a feltöltött dokumentum letöltése |
+
+Utánkövetés: ha egy ajánlat 3 napja „Ajánlat elküldve” állapotban van (`QuoteRequest::FOLLOW_UP_DAYS`), az admin jelzi.
 
 Állapotok: `new` (Új), `in_progress` (Folyamatban), `quoted` (Ajánlat elküldve), `won` (Megrendelve), `lost` (Elmaradt).
 

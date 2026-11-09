@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class QuoteRequest extends Model
 {
@@ -58,6 +60,37 @@ class QuoteRequest extends Model
     ];
 
     protected $hidden = ['ip_address'];
+
+    /** Ennyi nap után jelezzük, ha egy elküldött ajánlatra nem jött válasz. */
+    public const FOLLOW_UP_DAYS = 3;
+
+    protected function casts(): array
+    {
+        return ['status_changed_at' => 'datetime', 'price' => 'integer'];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(fn (self $q) => $q->status_changed_at ??= now());
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(QuoteRequestEvent::class)->latest('id');
+    }
+
+    /** Elküldött ajánlat, amire FOLLOW_UP_DAYS napja nem változott semmi: érdemes rákérdezni. */
+    public function needsFollowUp(): bool
+    {
+        return $this->status === 'quoted'
+            && $this->status_changed_at !== null
+            && $this->status_changed_at->lte(now()->subDays(self::FOLLOW_UP_DAYS));
+    }
+
+    public function scopeAwaitingFollowUp(Builder $query): Builder
+    {
+        return $query->where('status', 'quoted')->where('status_changed_at', '<=', now()->subDays(self::FOLLOW_UP_DAYS));
+    }
 
     public function statusLabel(): string
     {
