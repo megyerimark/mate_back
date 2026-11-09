@@ -70,13 +70,25 @@ class AdminUsersTest extends TestCase
             ->expectsOutputToContain('Jelszó:')
             ->assertSuccessful();
 
-        putenv('ADMIN_EMAIL=elso@example.com');
-        putenv('ADMIN_PASSWORD=seed-jelszo-123');
-        $this->artisan('db:seed', ['--force' => true])->assertSuccessful();
-        putenv('ADMIN_EMAIL');
-        putenv('ADMIN_PASSWORD');
+        // Mindhárom helyre írjuk: a Laravel env() a $_ENV/$_SERVER értéket előbb nézi, mint a putenv-et.
+        $this->setEnv(['ADMIN_EMAIL' => 'elso@example.com', 'ADMIN_PASSWORD' => 'seed-jelszo-123']);
+        try {
+            $this->artisan('db:seed', ['--force' => true])->assertSuccessful();
+        } finally {
+            $this->setEnv(['ADMIN_EMAIL' => '', 'ADMIN_PASSWORD' => '']);
+        }
 
         $this->assertTrue(Hash::check('seed-jelszo-123', User::where('email', 'elso@example.com')->value('password')));
         $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+    }
+
+    /** @param array<string, string> $vars */
+    private function setEnv(array $vars): void
+    {
+        foreach ($vars as $name => $value) {
+            putenv("{$name}={$value}");
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
     }
 }
