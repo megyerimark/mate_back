@@ -39,8 +39,9 @@ class QuoteRequestResource extends JsonResource
                 'user' => $e->user?->name ?? $e->user?->email,
                 'created_at' => $e->created_at?->toIso8601String(),
             ])),
-            'document_name' => $this->document_name,
-            'has_document' => (bool) $this->document_path,
+            'document_name' => $this->files()[0]['name'] ?? null,
+            'has_document' => count($this->files()) > 0,
+            'documents' => array_map(fn ($f, $i) => ['index' => $i, 'name' => $f['name'], 'size' => $f['size'], 'mime' => $f['mime']], $this->files(), array_keys($this->files())),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

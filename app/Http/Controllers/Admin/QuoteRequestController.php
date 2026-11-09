@@ -26,7 +26,7 @@ class QuoteRequestController extends Controller
         $filters = $this->filters($request, ['per_page' => ['nullable', 'integer', 'min:5', 'max:100']]);
 
         return QuoteRequestResource::collection(
-            $this->filtered($filters)->latest()->paginate($filters['per_page'] ?? 20),
+            $this->filtered($filters)->with('documents')->latest()->paginate($filters['per_page'] ?? 20),
         );
     }
 
@@ -34,7 +34,7 @@ class QuoteRequestController extends Controller
     public function export(Request $request): Response
     {
         $filters = $this->filters($request);
-        $quotes = $this->filtered($filters)->latest()->get();
+        $quotes = $this->filtered($filters)->with('documents')->latest()->get();
 
         $xlsx = (new XlsxWriter('Ajánlatkérések'))->columns([
             ['title' => 'Azonosító', 'width' => 11],
@@ -67,7 +67,7 @@ class QuoteRequestController extends Controller
                 strtoupper($q->locale ?? 'hu'),
                 $q->statusLabel(),
                 $q->price,
-                $q->document_name,
+                collect($q->files())->pluck('name')->join(', ') ?: null,
                 $q->message,
                 $q->admin_note,
                 $q->updated_at,
@@ -160,23 +160,19 @@ class QuoteRequestController extends Controller
 
     public function destroy(QuoteRequest $quoteRequest): JsonResponse
     {
-        if ($quoteRequest->document_path) {
-            Storage::disk('local')->delete($quoteRequest->document_path);
-        }
+        Storage::disk('local')->delete(array_column($quoteRequest->files(), 'path'));
         $quoteRequest->delete();
 
         return response()->json(['message' => 'Törölve.']);
     }
 
-    public function document(QuoteRequest $quoteRequest): StreamedResponse
+    /** A feltöltött fájlok egyike (sorszám szerint); a régi, sorszám nélküli útvonal az elsőt adja. */
+    public function document(QuoteRequest $quoteRequest, int $index = 0): StreamedResponse
     {
-        abort_unless(
-            $quoteRequest->document_path && Storage::disk('local')->exists($quoteRequest->document_path),
-            404,
-            'Ehhez az ajánlatkéréshez nincs dokumentum.',
-        );
+        $file = $quoteRequest->files()[$index] ?? null;
+        abort_unless($file && Storage::disk('local')->exists($file['path']), 404, 'Ehhez az ajánlatkéréshez nincs ilyen dokumentum.');
 
-        return Storage::disk('local')->download($quoteRequest->document_path, $quoteRequest->document_name);
+        return Storage::disk('local')->download($file['path'], $file['name']);
     }
 
     /** Összesítő számok a vezérlőpult tetejére. */

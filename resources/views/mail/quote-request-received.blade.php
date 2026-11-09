@@ -11,7 +11,7 @@
 | **Határidő** | {{ $quote->deadlineLabel() }} |
 | **Nyelv(ek)** | {{ $quote->source_language ? $quote->source_language.' → ' : '' }}{{ $quote->target_language ?: '–' }} |
 | **Weboldal nyelve** | {{ $quote->locale === 'en' ? 'angol (a visszaigazolást angolul kapta)' : 'magyar' }} |
-| **Dokumentum** | {{ $quote->document_name ?: 'nincs csatolva' }} |
+| **Dokumentum** | {{ collect($quote->files())->pluck('name')->join(', ') ?: 'nincs csatolva' }} |
 </x-mail::table>
 
 @if ($quote->message)

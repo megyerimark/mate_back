@@ -74,6 +74,29 @@ class QuoteRequest extends Model
         static::creating(fn (self $q) => $q->status_changed_at ??= now());
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(QuoteRequestDocument::class)->orderBy('id');
+    }
+
+    /**
+     * Az ajánlatkérés összes fájlja egységesen: a régi, egyfájlos oszlop (korábbi kéréseknél) és az új tábla.
+     *
+     * @return list<array{path: string, name: string, size: ?int, mime: ?string}>
+     */
+    public function files(): array
+    {
+        $files = [];
+        if ($this->document_path) {
+            $files[] = ['path' => $this->document_path, 'name' => $this->document_name ?? 'dokumentum', 'size' => null, 'mime' => null];
+        }
+        foreach ($this->documents as $d) {
+            $files[] = ['path' => $d->path, 'name' => $d->name, 'size' => $d->size, 'mime' => $d->mime];
+        }
+
+        return $files;
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(QuoteRequestEvent::class)->latest('id');

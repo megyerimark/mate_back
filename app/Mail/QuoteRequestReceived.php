@@ -33,13 +33,9 @@ class QuoteRequestReceived extends Mailable
 
     public function attachments(): array
     {
-        if (! $this->quote->document_path) {
-            return [];
-        }
-
-        return [
-            Attachment::fromStorageDisk('local', $this->quote->document_path)
-                ->as($this->quote->document_name),
-        ];
+        return array_map(
+            fn ($f) => Attachment::fromStorageDisk('local', $f['path'])->as($f['name']),
+            $this->quote->files(),
+        );
     }
 }

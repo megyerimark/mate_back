@@ -3,8 +3,8 @@
 
 Thank you, we have received your message. Our project managers will contact you as soon as possible{{ $quote->service !== 'spelling' ? ' and prepare a custom quote for you' : '' }}.
 
-@if ($quote->document_name)
-Your attached document ({{ $quote->document_name }}) has arrived safely.
+@if ($files = collect($quote->files())->pluck('name')->join(', '))
+{{ count($quote->files()) > 1 ? 'Your attached documents' : 'Your attached document' }} ({{ $files }}) {{ count($quote->files()) > 1 ? 'have' : 'has' }} arrived safely.
 @endif
 
 <x-mail::panel>

@@ -8,4 +8,7 @@ return [
     'phone' => env('QUOTE_CONTACT_PHONE') ?: '+36 30 857 6652',
 
     'max_file_kb' => (int) env('QUOTE_MAX_FILE_KB', 8192),
+
+    // Az összes feltöltött fájl együtt (a levél mellékletei miatt; a legtöbb levelező 25 MB-ig fogad).
+    'max_total_kb' => (int) env('QUOTE_MAX_TOTAL_KB', 20480),
 ];

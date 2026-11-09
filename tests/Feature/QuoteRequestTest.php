@@ -49,13 +49,15 @@ class QuoteRequestTest extends TestCase
 
         $quote = QuoteRequest::sole();
         $this->assertSame('Teszt Elek', $quote->name);
-        $this->assertSame('bizonyitvany.pdf', $quote->document_name);
-        Storage::disk('local')->assertExists($quote->document_path);
+        // A régi, egyfájlos „document” mező is működik; a fájl a quote_request_documents táblába kerül.
+        [$file] = $quote->files();
+        $this->assertSame('bizonyitvany.pdf', $file['name']);
+        Storage::disk('local')->assertExists($file['path']);
 
-        Mail::assertSent(QuoteRequestReceived::class, function (QuoteRequestReceived $mail) use ($quote) {
+        Mail::assertSent(QuoteRequestReceived::class, function (QuoteRequestReceived $mail) use ($file) {
             $mail->assertTo('forditas@example.com')
                 ->assertHasReplyTo('elek@example.com')
-                ->assertHasAttachment(Attachment::fromStorageDisk('local', $quote->document_path)->as('bizonyitvany.pdf'));
+                ->assertHasAttachment(Attachment::fromStorageDisk('local', $file['path'])->as('bizonyitvany.pdf'));
 
             return true;
         });
@@ -66,7 +68,7 @@ class QuoteRequestTest extends TestCase
     {
         $this->post('/api/quote-requests', $this->payload())->assertCreated();
 
-        $this->assertNull(QuoteRequest::sole()->document_path);
+        $this->assertSame([], QuoteRequest::sole()->files());
     }
 
     public function test_it_validates_with_hungarian_messages(): void

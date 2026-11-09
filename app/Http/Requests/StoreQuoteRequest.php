@@ -28,12 +28,10 @@ class StoreQuoteRequest extends FormRequest
             'target_language' => ['nullable', 'string', 'max:100'],
             // Helyesírási tanácsadásnál a kérdés maga az üzenet.
             'message' => ['nullable', 'required_if:service,spelling', 'string', 'max:5000'],
-            'document' => [
-                'nullable',
-                'file',
-                'max:'.config('quotes.max_file_kb'),
-                'mimes:pdf,doc,docx,jpg,jpeg,png,txt,xlsx,pptx',
-            ],
+            // Egy fájl (régi űrlap) vagy több fájl (documents[]), legfeljebb 5, összesen max_total_kb.
+            'document' => ['nullable', ...self::fileRules()],
+            'documents' => ['nullable', 'array', 'max:'.self::MAX_FILES],
+            'documents.*' => self::fileRules(),
             'privacy_accepted' => ['accepted'],
             // Honeypot: emberek nem látják, botok kitöltik.
             'website' => ['nullable', 'string'],
@@ -48,6 +46,33 @@ class StoreQuoteRequest extends FormRequest
         return $this->input('locale') === 'en'
             ? 'The security check failed. Please reload the page and try again, or send us an email.'
             : 'A biztonsági ellenőrzés nem sikerült. Kérjük, töltse újra az oldalt és próbálja újra, vagy írjon e-mailt.';
+    }
+
+    public const MAX_FILES = 5;
+
+    /** @return list<string> */
+    private static function fileRules(): array
+    {
+        return ['file', 'max:'.config('quotes.max_file_kb'), 'mimes:pdf,doc,docx,jpg,jpeg,png,txt,xlsx,pptx'];
+    }
+
+    /** @return list<\Illuminate\Http\UploadedFile> */
+    public function uploadedFiles(): array
+    {
+        return array_values(array_filter([...(array) $this->file('documents', []), $this->file('document')]));
+    }
+
+    public function after(): array
+    {
+        return [function ($validator) {
+            $totalKb = array_sum(array_map(fn ($f) => $f->getSize(), $this->uploadedFiles())) / 1024;
+            if ($totalKb > config('quotes.max_total_kb')) {
+                $mb = intdiv(config('quotes.max_total_kb'), 1024);
+                $validator->errors()->add('documents', $this->input('locale') === 'en'
+                    ? "The files together may be at most {$mb} MB. Please send the rest by email."
+                    : "A fájlok együtt legfeljebb {$mb} MB-osak lehetnek. A többit kérjük, küldje e-mailben.");
+            }
+        }];
     }
 
     public function messages(): array
@@ -68,6 +93,11 @@ class StoreQuoteRequest extends FormRequest
                 'document.mimes' => 'This file type is not supported. You can upload PDF, Word, Excel, PowerPoint, image or text files.',
                 'document.uploaded' => 'The file could not be uploaded. Please try again or send it by email.',
                 'document.file' => 'The document could not be uploaded.',
+                'documents.max' => 'You can upload at most '.self::MAX_FILES.' files. Please send the rest by email.',
+                'documents.*.max' => "A file is too large (max. {$mb} MB). Please send it by email.",
+                'documents.*.mimes' => 'This file type is not supported. You can upload PDF, Word, Excel, PowerPoint, image or text files.',
+                'documents.*.uploaded' => 'A file could not be uploaded. Please try again or send it by email.',
+                'documents.*.file' => 'A file could not be uploaded.',
                 'privacy_accepted.accepted' => 'You need to accept the Privacy Policy.',
                 'recaptcha_token.required' => $this->recaptchaMessage(),
                 '*.max' => 'The :attribute may be at most :max characters.',
@@ -88,6 +118,11 @@ class StoreQuoteRequest extends FormRequest
             'document.mimes' => 'Ez a fájltípus nem támogatott. PDF, Word, Excel, PowerPoint, kép vagy szöveg tölthető fel.',
             'document.uploaded' => 'A fájl feltöltése nem sikerült. Kérjük, próbálja újra vagy küldje e-mailben.',
             'document.file' => 'A dokumentum feltöltése nem sikerült.',
+            'documents.max' => 'Legfeljebb '.self::MAX_FILES.' fájl tölthető fel. A többit kérjük, küldje e-mailben.',
+            'documents.*.max' => "Egy fájl túl nagy (max. {$mb} MB). Kérjük, küldje e-mailben.",
+            'documents.*.mimes' => 'Ez a fájltípus nem támogatott. PDF, Word, Excel, PowerPoint, kép vagy szöveg tölthető fel.',
+            'documents.*.uploaded' => 'Egy fájl feltöltése nem sikerült. Kérjük, próbálja újra vagy küldje e-mailben.',
+            'documents.*.file' => 'Egy fájl feltöltése nem sikerült.',
             'privacy_accepted.accepted' => 'Az adatvédelmi nyilatkozat elfogadása kötelező.',
             'recaptcha_token.required' => $this->recaptchaMessage(),
             '*.max' => 'A(z) :attribute legfeljebb :max karakter lehet.',

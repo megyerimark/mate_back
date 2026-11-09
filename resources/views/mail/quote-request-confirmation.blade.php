@@ -3,8 +3,8 @@
 
 Köszönjük, megkaptuk az üzenetét. A projektmenedzsereink a lehető leghamarabb felveszik Önnel a kapcsolatot{{ $quote->service !== 'spelling' ? ', és egyedi árajánlatot készítenek Önnek' : '' }}.
 
-@if ($quote->document_name)
-A csatolt dokumentum ({{ $quote->document_name }}) rendben megérkezett.
+@if ($files = collect($quote->files())->pluck('name')->join(', '))
+{{ count($quote->files()) > 1 ? 'A csatolt dokumentumok' : 'A csatolt dokumentum' }} ({{ $files }}) rendben megérkezett.
 @endif
 
 <x-mail::panel>
