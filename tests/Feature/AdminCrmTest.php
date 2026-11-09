@@ -92,4 +92,16 @@ class AdminCrmTest extends TestCase
         $this->getJson('/api/admin/stats/overview')->assertJsonPath('monthly.11.month', '2026-11')->assertJsonPath('monthly.11.total', 1)
             ->assertJsonPath('monthly.10.total', 0)->assertJsonPath('this_month', 1)->assertJsonPath('last_month', 0);
     }
+
+    public function test_task_deadline_sent_in_utc_comes_back_as_the_same_moment(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $id = $this->postJson('/api/admin/tasks', ['title' => 'Hívás', 'due_at' => '2026-11-08T09:00:00.000Z'])->json('data.id');
+
+        $back = $this->getJson('/api/admin/tasks')->json('data.0.due_at');
+        $this->assertTrue(Carbon::parse($back)->equalTo(Carbon::parse('2026-11-08T09:00:00Z')), "visszakapott: {$back}");
+
+        $this->patchJson("/api/admin/tasks/{$id}", ['due_at' => '2026-07-01T22:30:00Z'])
+            ->assertJsonPath('data.due_at', fn ($v) => Carbon::parse($v)->equalTo(Carbon::parse('2026-07-01T22:30:00Z')));
+    }
 }

@@ -6,11 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 /** Feladatok és határidők az adminban. */
 class TaskController extends Controller
 {
+    /**
+     * A böngésző UTC-ben küldi a határidőt (pl. 2026-11-08T09:00:00Z). Az adatbázis az alkalmazás időzónájában
+     * tárol, ezért átváltjuk, különben a visszaolvasott idő egy-két órával elcsúszna.
+     */
+    private static function localDue(array $data): array
+    {
+        if (array_key_exists('due_at', $data)) {
+            $data['due_at'] = $data['due_at'] ? Carbon::parse($data['due_at'])->setTimezone(config('app.timezone')) : null;
+        }
+
+        return $data;
+    }
+
     private const MESSAGES = ['title.required' => 'Írd be a feladatot.', 'due_at.date' => 'Érvénytelen határidő.'];
 
     public function index(Request $request): JsonResponse
@@ -38,7 +52,7 @@ class TaskController extends Controller
             'due_at' => ['nullable', 'date'],
             'quote_request_id' => ['nullable', 'integer', 'exists:quote_requests,id'],
         ], self::MESSAGES);
-        $task = new Task($data);
+        $task = new Task(self::localDue($data));
         $task->user_id = $request->user()->id;
         $task->save();
 
@@ -56,7 +70,7 @@ class TaskController extends Controller
             $task->done_at = $data['done'] ? now() : null;
             unset($data['done']);
         }
-        $task->fill($data)->save();
+        $task->fill(self::localDue($data))->save();
 
         return response()->json(['data' => $task->load(['quoteRequest:id,name', 'user:id,name'])->toApi()]);
     }
