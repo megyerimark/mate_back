@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Google reCAPTCHA v3 az űrlapokhoz. Ha a titkos kulcs üres, az ellenőrzés kikapcsol (pl. fejlesztéskor).
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'secret' => env('RECAPTCHA_SECRET_KEY'),
+        'min_score' => env('RECAPTCHA_MIN_SCORE', 0.5),
+    ],
+
 ];

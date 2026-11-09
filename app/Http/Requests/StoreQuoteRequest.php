@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\QuoteRequest;
+use App\Rules\Recaptcha;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,7 +37,17 @@ class StoreQuoteRequest extends FormRequest
             'privacy_accepted' => ['accepted'],
             // Honeypot: emberek nem látják, botok kitöltik.
             'website' => ['nullable', 'string'],
+            'recaptcha_token' => Recaptcha::enabled()
+                ? ['required', 'string', new Recaptcha('quote', $this->recaptchaMessage())]
+                : ['nullable'],
         ];
+    }
+
+    private function recaptchaMessage(): string
+    {
+        return $this->input('locale') === 'en'
+            ? 'The security check failed. Please reload the page and try again, or send us an email.'
+            : 'A biztonsági ellenőrzés nem sikerült. Kérjük, töltse újra az oldalt és próbálja újra, vagy írjon e-mailt.';
     }
 
     public function messages(): array
@@ -58,6 +69,7 @@ class StoreQuoteRequest extends FormRequest
                 'document.uploaded' => 'The file could not be uploaded. Please try again or send it by email.',
                 'document.file' => 'The document could not be uploaded.',
                 'privacy_accepted.accepted' => 'You need to accept the Privacy Policy.',
+                'recaptcha_token.required' => $this->recaptchaMessage(),
                 '*.max' => 'The :attribute may be at most :max characters.',
                 '*.string' => 'The :attribute field is invalid.',
             ];
@@ -77,6 +89,7 @@ class StoreQuoteRequest extends FormRequest
             'document.uploaded' => 'A fájl feltöltése nem sikerült. Kérjük, próbálja újra vagy küldje e-mailben.',
             'document.file' => 'A dokumentum feltöltése nem sikerült.',
             'privacy_accepted.accepted' => 'Az adatvédelmi nyilatkozat elfogadása kötelező.',
+            'recaptcha_token.required' => $this->recaptchaMessage(),
             '*.max' => 'A(z) :attribute legfeljebb :max karakter lehet.',
             '*.string' => 'A(z) :attribute mező formátuma érvénytelen.',
         ];

@@ -22,7 +22,7 @@ class QuoteRequestController extends Controller
             return $ok;
         }
 
-        $data = $request->safe()->except(['document', 'privacy_accepted', 'website']);
+        $data = $request->safe()->except(['document', 'privacy_accepted', 'website', 'recaptcha_token']);
         $data['service'] = $data['service'] ?? 'translation';
         $data['locale'] = $data['locale'] ?? 'hu';
         // A tolmácsolás típusa csak tolmácsolásnál értelmes.

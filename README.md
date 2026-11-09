@@ -77,6 +77,18 @@ Nyilvános regisztráció nincs. A bejelentkezés tokennel működik (Laravel Sa
 
 Állapotok: `new` (Új), `in_progress` (Folyamatban), `quoted` (Ajánlat elküldve), `won` (Megrendelve), `lost` (Elmaradt).
 
+## reCAPTCHA
+
+Az űrlapokat Google reCAPTCHA v3 védi (láthatatlan, a látogatónak nem kell kattintgatnia), ugyanazzal a kulccsal, mint a régi WordPress oldalt.
+A nyilvános kulcs a frontendben van (`environment.ts`), a **titkos kulcsot** a `.env`-be kell írni:
+
+```
+RECAPTCHA_SECRET_KEY=...   # a régi WordPressben: Elementor → Beállítások → Integrációk, vagy https://www.google.com/recaptcha/admin
+RECAPTCHA_MIN_SCORE=0.5    # 0 = biztosan bot, 1 = biztosan ember
+```
+
+Üres titkos kulccsal az ellenőrzés kikapcsol. Ha a Google épp nem érhető el, az ajánlatkérés átmegy (a honeypot és a percenkénti korlát továbbra is véd).
+
 ## Élesítés
 
 1. A frontendben: `npm run build:backend` – bemásolja a lebuildelt oldalt ennek a projektnek a `public` mappájába.
