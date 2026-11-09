@@ -320,3 +320,21 @@ img {
     vertical-align: 2px;
     width: 22px;
 }
+
+.brand-logo {
+    border: 0;
+    height: auto;
+    max-width: 180px;
+    width: 180px;
+    color: #245b48;
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.summary-row {
+    margin: 0 0 6px;
+}
+
+.summary-label {
+    color: #6b7671;
+}

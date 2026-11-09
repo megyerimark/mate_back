@@ -134,6 +134,31 @@ class QuoteRequestTest extends TestCase
         Mail::assertSent(QuoteRequestConfirmation::class, function (QuoteRequestConfirmation $mail) {
             $mail->assertHasSubject('We have received your request – '.config('app.name'));
             $mail->assertSeeInHtml('Dear Teszt Elek');
+            $mail->assertSeeInText('Interpreting – Simultaneous interpreting');
+            $mail->assertSeeInText('magyar–német');
+            $mail->assertDontSeeInText('Tolmácsolás');
+
+            return true;
+        });
+    }
+
+    public function test_confirmation_has_the_logo_and_a_summary_of_what_was_sent(): void
+    {
+        $this->post('/api/quote-requests', $this->payload([
+            'document' => UploadedFile::fake()->create('szerződés.pdf', 100, 'application/pdf'),
+            'message' => "Kell záradék.\n<b>Köszönöm</b>",
+            'deadline' => 'express',
+        ]))->assertCreated();
+
+        Mail::assertSent(QuoteRequestConfirmation::class, function (QuoteRequestConfirmation $mail) {
+            $mail->assertSeeInHtml(asset('email/done-translations-logo.png'));
+            $mail->assertSeeInHtml('alt="'.config('app.name').'"', false);
+            $mail->assertSeeInText('Szolgáltatás: Fordítás');
+            $mail->assertSeeInText('Határidő: Expressz (akár aznapra)');
+            $mail->assertSeeInText('A csatolt dokumentum (szerződés.pdf) rendben megérkezett.');
+            // Az ügyfél szövege nem kerülhet HTML-ként a levélbe.
+            $mail->assertSeeInHtml('&lt;b&gt;Köszönöm&lt;/b&gt;', false);
+            $mail->assertDontSeeInHtml('<b>Köszönöm</b>', false);
 
             return true;
         });

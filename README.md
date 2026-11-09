@@ -26,7 +26,8 @@ Tesztek: `php artisan test`
 1. Az ügyfél kitölti az űrlapot a weboldalon, és opcionálisan feltölti a dokumentumot.
 2. `POST /api/quote-requests`: a Laravel ellenőrzi az adatokat, elmenti az adatbázisba, a fájlt privát tárhelyre (`storage/app/private/quote-requests`).
 3. A fordító e-mailt kap az összes adattal **és a csatolt dokumentummal**. A „Válasz” gomb közvetlenül az ügyfélnek ír.
-4. Az ügyfél automatikus visszaigazoló e-mailt kap.
+4. Az ügyfél automatikus visszaigazoló e-mailt kap (ajánlatkérés, tolmácsfoglalás, dokumentumküldés és helyesírási kérdés esetén is),
+   benne a logóval és annak összefoglalójával, amit beküldött (szolgáltatás, nyelvek, határidő, üzenet; a dokumentumot külön visszaigazolja).
 5. Védelem: rejtett mezős spamszűrő (honeypot), IP-alapú korlát (5 kérés/perc, 30/nap), fájltípus- és méretellenőrzés (max. 8 MB).
 
 Az űrlap a szolgáltatást is elküldi (`service`: translation, proofreading, post_editing, interpreting, spelling),
@@ -47,6 +48,8 @@ Ezért a `public/.htaccess`-ből kivettük a Laravel „Redirect Trailing Slashe
 **Nginx** esetén a szokásos Laravel beállítás kell, `$uri/` nélkül: `try_files $uri /index.php?$query_string;`
 
 Az e-mailek a weboldal színeit használják: `resources/views/vendor/mail/html/themes/donetranslations.css`.
+A fejlécben lévő logó: `public/email/done-translations-logo.png` (400 px széles PNG; ha a logó változik, ezt a fájlt kell lecserélni).
+A kép teljes címmel kerül a levélbe, ezért élesben az `APP_URL` legyen `https://donetranslations.hu`.
 
 ## Admin
 
