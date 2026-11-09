@@ -13,6 +13,8 @@ Thank you, we have received your message. Our project managers will contact you 
 @endforeach
 </x-mail::panel>
 
+We work to premium standards: at least two professional translators work on every translation, and we guarantee our deadlines. With us, you don’t get 100% – you get 110%.
+
 If it is urgent or you have any questions, reply to this email or call us: {{ config('quotes.phone') }}
 
 Kind regards,<br>

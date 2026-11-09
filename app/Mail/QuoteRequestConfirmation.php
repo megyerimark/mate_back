@@ -15,7 +15,11 @@ class QuoteRequestConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public QuoteRequest $quote) {}
+    public function __construct(public QuoteRequest $quote)
+    {
+        // A levél (a lábléc is) az ügyfél nyelvén készül.
+        $this->locale($quote->locale === 'en' ? 'en' : 'hu');
+    }
 
     public function envelope(): Envelope
     {
@@ -63,7 +67,7 @@ class QuoteRequestConfirmation extends Mailable
         }
 
         $languages = collect([$q->source_language, $q->target_language])->filter(fn ($v) => filled($v))->implode(' → ');
-        $deadline = $q->service === 'spelling' ? null
+        $deadline = in_array($q->service, ['spelling', 'interpreting'], true) ? null
             : ($en ? (self::EN['deadlines'][$q->deadline] ?? null) : (QuoteRequest::DEADLINES[$q->deadline] ?? null));
         $message = filled($q->message) ? Str::limit(trim($q->message), 400) : null;
 

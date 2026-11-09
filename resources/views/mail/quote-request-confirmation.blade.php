@@ -13,6 +13,8 @@ Köszönjük, megkaptuk az üzenetét. A projektmenedzsereink a lehető leghamar
 @endforeach
 </x-mail::panel>
 
+Prémium minőségben dolgozunk: minden fordításon legalább két szakfordító dolgozik, és a határidőre is garanciát vállalunk. Nálunk nem 100%-ot kap, hanem 110%-ot.
+
 Ha sürgős, vagy kérdése van, válaszoljon erre a levélre, vagy hívjon minket: {{ config('quotes.phone') }}
 
 Üdvözlettel,<br>

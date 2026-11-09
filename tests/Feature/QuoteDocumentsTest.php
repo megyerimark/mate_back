@@ -89,4 +89,22 @@ class QuoteDocumentsTest extends TestCase
         $this->getJson("/api/admin/quote-requests/{$q->id}")->assertJsonPath('data.documents.0.name', 'regi.pdf');
         $this->get("/api/admin/quote-requests/{$q->id}/document")->assertDownload('regi.pdf');
     }
+
+    public function test_interpreting_booking_can_attach_files_too(): void
+    {
+        $this->post('/api/quote-requests', $this->payload(['service' => 'interpreting', 'interpreting_type' => 'simultaneous', 'locale' => 'en',
+            'target_language' => 'English–Hungarian', 'documents' => [UploadedFile::fake()->create('program.pdf', 120, 'application/pdf')]]))->assertCreated();
+
+        $quote = QuoteRequest::sole();
+        $this->assertSame('interpreting', $quote->service);
+        $this->assertSame(['program.pdf'], array_column($quote->files(), 'name'));
+        Mail::assertSent(QuoteRequestReceived::class, fn ($m) => count($m->attachments()) === 1);
+        Mail::assertSent(QuoteRequestConfirmation::class, function ($m) {
+            $m->assertSeeInHtml('Premium translation · 110%');
+            $m->assertSeeInText('Your attached document (program.pdf) has arrived safely.');
+            $m->assertDontSeeInText('Deadline');
+
+            return true;
+        });
+    }
 }

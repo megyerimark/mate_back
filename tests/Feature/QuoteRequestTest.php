@@ -153,7 +153,7 @@ class QuoteRequestTest extends TestCase
         ]))->assertCreated();
 
         Mail::assertSent(QuoteRequestConfirmation::class, function (QuoteRequestConfirmation $mail) {
-            $mail->assertSeeInHtml(asset('email/done-translations-logo.png'));
+            $mail->assertSeeInHtml(asset('email/done-translations-logo-light.png'));
             $mail->assertSeeInHtml('alt="'.config('app.name').'"', false);
             $mail->assertSeeInText('Szolgáltatás: Fordítás');
             $mail->assertSeeInText('Határidő: Expressz (akár aznapra)');

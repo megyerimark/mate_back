@@ -21,6 +21,8 @@
 {{-- Lábléc --}}
 <x-slot:footer>
 <x-mail::footer>
+<p class="tagline">{{ app()->getLocale() === 'en' ? 'Premium translation · 110%' : 'Prémium fordítás · 110%' }}</p>
+
 © {{ date('Y') }} {{ config('app.name') }} · {{ preg_replace('#^https?://#', '', rtrim(config('app.url'), '/')) }}
 </x-mail::footer>
 </x-slot:footer>
